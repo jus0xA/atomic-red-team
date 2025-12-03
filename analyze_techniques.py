@@ -2,6 +2,7 @@
 """
 Atomic Red Team Technique Counter
 Analyzes techniques by tactic and platform from the /atomics directory
+Outputs technique IDs for cross-framework comparison
 """
 
 import yaml
@@ -107,10 +108,10 @@ def main():
 
     # Step 3: Count techniques by tactic (only those that exist)
     print("\n" + "=" * 70)
-    print("TECHNIQUES BY TACTIC")
+    print("TECHNIQUES BY TACTIC (Counts)")
     print("=" * 70)
 
-    tactic_counts = {}
+    tactic_techniques = {}
     for tactic in ['reconnaissance', 'resource-development', 'initial-access',
                    'execution', 'persistence', 'privilege-escalation',
                    'defense-evasion', 'credential-access', 'discovery',
@@ -121,18 +122,18 @@ def main():
             # Get techniques listed in index for this tactic
             index_techniques = set(index_data[tactic].keys())
             # Only count those that actually exist in /atomics
-            existing = index_techniques & all_techniques
-            tactic_counts[tactic] = len(existing)
+            existing = sort_techniques(index_techniques & all_techniques)
+            tactic_techniques[tactic] = existing
 
             # Format tactic name for display
             display_name = tactic.replace('-', ' ').title()
             print(f"{display_name}: {len(existing)}")
         else:
-            tactic_counts[tactic] = 0
+            tactic_techniques[tactic] = []
 
     # Step 4: Categorize all techniques by platform
     print("\n" + "=" * 70)
-    print("TECHNIQUES BY PLATFORM")
+    print("TECHNIQUES BY PLATFORM (Counts)")
     print("=" * 70)
 
     ad_techniques = []
@@ -149,25 +150,59 @@ def main():
         elif category == 'hybrid':
             hybrid_techniques.append(tech_id)
 
+    # Sort all platform categories
+    ad_techniques = sort_techniques(ad_techniques)
+    cloud_techniques = sort_techniques(cloud_techniques)
+    hybrid_techniques = sort_techniques(hybrid_techniques)
+
     print(f"AD/On-Prem (Windows, Linux, macOS): {len(ad_techniques)}")
     print(f"Cloud (Azure, AWS, GCP, etc.): {len(cloud_techniques)}")
     print(f"Hybrid (Both AD and Cloud): {len(hybrid_techniques)}")
 
-    # Step 5: Show example - Defense Evasion techniques
+    # ========================================================================
+    # OUTPUT TECHNIQUE IDS BY PLATFORM CATEGORY
+    # ========================================================================
     print("\n" + "=" * 70)
-    print("EXAMPLE: DEFENSE EVASION TECHNIQUES")
+    print("AD/ON-PREM TECHNIQUE IDs")
+    print("=" * 70)
+    for tech in ad_techniques:
+        print(tech)
+
+    print("\n" + "=" * 70)
+    print("CLOUD TECHNIQUE IDs")
+    print("=" * 70)
+    for tech in cloud_techniques:
+        print(tech)
+
+    print("\n" + "=" * 70)
+    print("HYBRID TECHNIQUE IDs")
+    print("=" * 70)
+    for tech in hybrid_techniques:
+        print(tech)
+
+    # ========================================================================
+    # OUTPUT TECHNIQUE IDS BY TACTIC (Selected tactics)
+    # ========================================================================
+    print("\n" + "=" * 70)
+    print("TECHNIQUE IDs BY TACTIC")
     print("=" * 70)
 
-    if 'defense-evasion' in index_data:
-        de_techniques = set(index_data['defense-evasion'].keys())
-        de_existing = sort_techniques(de_techniques & all_techniques)
+    # Output selected tactics of interest
+    selected_tactics = [
+        ('initial-access', 'Initial Access'),
+        ('persistence', 'Persistence'),
+        ('privilege-escalation', 'Privilege Escalation'),
+        ('defense-evasion', 'Defense Evasion'),
+        ('lateral-movement', 'Lateral Movement'),
+        ('exfiltration', 'Exfiltration'),
+        ('impact', 'Impact')
+    ]
 
-        print(f"Total Defense Evasion: {len(de_existing)}")
-        print(f"\nFirst 10 techniques:")
-        for tech in de_existing[:10]:
-            print(f"  {tech}")
-        if len(de_existing) > 10:
-            print(f"  ... and {len(de_existing) - 10} more")
+    for tactic_key, tactic_name in selected_tactics:
+        if tactic_key in tactic_techniques and tactic_techniques[tactic_key]:
+            print(f"\n{tactic_name} ({len(tactic_techniques[tactic_key])}):")
+            for tech in tactic_techniques[tactic_key]:
+                print(f"  {tech}")
 
 if __name__ == '__main__':
     main()
